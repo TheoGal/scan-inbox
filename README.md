@@ -33,7 +33,7 @@ seconds later.
 - Don't have a code to scan? Use the **Insert text** button to type or paste
   something in directly - it's saved the same way.
 - Scans older than 6 months are cleaned up automatically.
-- On a desktop screen the camera is hidden — desktop is for reading results,
+- On a desktop screen the camera is hidden - desktop is for reading results,
   phones are for scanning. The list there is paged so it never scrolls; on
   a phone it pages 10 at a time.
 
@@ -48,8 +48,6 @@ add scans. Put it behind a reverse proxy with your own domain and an authorizati
 Im using Caddy [Caddy](https://caddyserver.com/) and [Authelia](https://www.authelia.com/)
 
 **It needs HTTPS.** Browsers only allow camera access on a secure page.
-`localhost` also works for local testing, but a plain `http://` address on a
-phone will not.
 
 ## Deploy it
 
@@ -67,7 +65,8 @@ services:
       - "127.0.0.1:8790:8000"   # loopback only; put a reverse proxy with login in front
     volumes:
       - scan-inbox-data:/data   # SQLite database lives here (scans.db)
-      # optional: use ./static:/app/static:ro to override the html pages built into the image
+      # optional: uncomment the line below to override the html pages built into the image
+      # - ./static:/app/static:ro
 
 volumes:
   scan-inbox-data:
@@ -106,7 +105,7 @@ Your scans live in a Docker volume and are kept across updates.
 You can mount a local `./static` folder over the pages baked
 into the image. Any file you place there - `index.html`, `app.js`,
 `style.css` - overrides the built-in one; anything you leave out still comes
-from the image.
+from the image. Be sure to manually create the folder `static` next to your `docker-compose.yml` file
 
 ## Tech
 
