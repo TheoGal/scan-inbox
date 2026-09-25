@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0a1428">
+  <title>Scan inbox</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5bff'/%3E%3Cpath d='M8 13V8h5M19 8h5v5M24 19v5h-5M13 24H8v-5' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <h1>Scan inbox</h1>
+      <button id="insert-open" class="linklike" type="button">Insert text</button>
+    </header>
+
+    <div id="banner" class="banner" role="alert" hidden>
+      <span id="banner-text"></span>
+      <button id="banner-reload" type="button" hidden>Reload</button>
+    </div>
+
+    <section id="scanner" class="scanner" aria-label="Scanner">
+      <div id="viewfinder" class="viewfinder">
+        <video id="video" playsinline muted></video>
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+        <p id="idle" class="idle">Camera is off</p>
+      </div>
+      <div class="controls">
+        <button id="toggle" class="primary" type="button">Start camera</button>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section id="results" class="results" aria-label="Scans">
+      <ol id="list" class="tape"></ol>
+      <p id="empty" class="empty" hidden>Nothing scanned yet. Open this page on your phone, start the camera and point it at a code.</p>
+      <nav id="pager" class="pager" hidden>
+        <button id="newer" type="button">‹ Newer</button>
+        <span class="mid"><span id="range"></span> <button id="unseen" class="unseen" type="button" hidden></button></span>
+        <button id="older" type="button">Older ›</button>
+      </nav>
+    </section>
+  </main>
+  <dialog id="insert">
+    <label for="insert-text" class="dialog-label">Text to save as a scan</label>
+    <textarea id="insert-text" maxlength="4096" rows="6" spellcheck="false" autofocus></textarea>
+    <div class="dialog-actions">
+      <button id="insert-cancel" type="button">Cancel</button>
+      <button id="insert-save" class="primary" type="button">Save</button>
+    </div>
+  </dialog>
+  <dialog id="detail">
+    <pre id="detail-text"></pre>
+    <div class="dialog-actions">
+      <button id="detail-copy" type="button">Copy</button>
+      <button id="detail-close" type="button">Close</button>
+    </div>
+  </dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

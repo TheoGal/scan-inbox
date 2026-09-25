@@ -1,0 +1,14 @@
+services:
+  scan-inbox:
+    image: ghcr.io/theogal/scan-inbox:latest
+    container_name: scan-inbox
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8790:8000"   # loopback only; put a reverse proxy with login in front
+    volumes:
+      - scan-inbox-data:/data   # SQLite database lives here (scans.db)
+      # optional: use ./static:/app/static:ro to override the html pages built into the image
+
+volumes:
+  scan-inbox-data:
+    name: scan-inbox-data
