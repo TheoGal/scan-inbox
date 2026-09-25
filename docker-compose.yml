@@ -7,7 +7,8 @@ services:
       - "127.0.0.1:8790:8000"   # loopback only; put a reverse proxy with login in front
     volumes:
       - scan-inbox-data:/data   # SQLite database lives here (scans.db)
-      # optional: use ./static:/app/static:ro to override the html pages built into the image
+      # optional: uncomment the line below to override the html pages built into the image
+      # - ./static:/app/static:ro
 
 volumes:
   scan-inbox-data:
