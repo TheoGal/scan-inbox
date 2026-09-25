@@ -5,7 +5,7 @@
 
 # scan-inbox
 
-Scan a QR code or barcode on your phone, read it back on any other device — a
+Scan a QR code or barcode on your phone, read it back on any other device - a
 laptop, another phone, a shared screen. No app to install, just a page in the
 browser.
 
@@ -31,7 +31,7 @@ seconds later.
 - Open the same site on another device to see the list of everything
   scanned, newest first.
 - Don't have a code to scan? Use the **Insert text** button to type or paste
-  something in directly — it's saved the same way.
+  something in directly - it's saved the same way.
 - Scans older than 6 months are cleaned up automatically.
 - On a desktop screen the camera is hidden — desktop is for reading results,
   phones are for scanning. The list there is paged so it never scrolls; on
@@ -55,12 +55,29 @@ phone will not.
 
 You need Docker and Docker Compose on the server.
 
-1. Download `docker-compose.yml` from this repo.
+1. Download `docker-compose.yml` from this repo or create one based on the following example.
+
+```
+services:
+  scan-inbox:
+    image: ghcr.io/theogal/scan-inbox:latest
+    container_name: scan-inbox
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8790:8000"   # loopback only; put a reverse proxy with login in front
+    volumes:
+      - scan-inbox-data:/data   # SQLite database lives here (scans.db)
+      # optional: use ./static:/app/static:ro to override the html pages built into the image
+
+volumes:
+  scan-inbox-data:
+    name: scan-inbox-data
+```    
 
 2. Start it:
 
    ```
-   docker compose up -d
+   docker compose up
    ```
 
    The app listens on `127.0.0.1:8790`. Change the port on the left of the
@@ -87,10 +104,9 @@ Your scans live in a Docker volume and are kept across updates.
 ### Customizing the pages
 
 You can mount a local `./static` folder over the pages baked
-into the image. Any file you place there — `index.html`, `app.js`,
-`style.css` — overrides the built-in one; anything you leave out still comes
-from the image. Delete that line from `docker-compose.yml` if you don't want
-this and just want the pages exactly as shipped.
+into the image. Any file you place there - `index.html`, `app.js`,
+`style.css` - overrides the built-in one; anything you leave out still comes
+from the image.
 
 ## Tech
 
@@ -104,4 +120,4 @@ fallback for browsers without it.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
