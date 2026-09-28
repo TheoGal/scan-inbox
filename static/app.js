@@ -105,6 +105,7 @@ let view = [];          // what the pager is paging through (newest first)
 let page = 0;
 let unseen = 0;         // scans that arrived while browsing an older page
 let loaded = false;
+let hasData = false;   // true as soon as the first server response arrives, whether empty or not
 let knownIds = new Set();
 let lastSig = '';
 
@@ -221,7 +222,7 @@ function render() {
   for (const scan of slice) fragment.append(scanRow(scan, loaded && !knownIds.has(scan.id)));
   els.list.replaceChildren(fragment);
 
-  els.empty.hidden = !loaded || view.length > 0;
+  els.empty.hidden = !hasData || view.length > 0;
   els.pager.hidden = view.length <= size && !unseen;
   els.range.textContent = view.length ? `${page * size + 1}–${page * size + slice.length} of ${view.length}` : '';
   els.newer.disabled = page === 0;
@@ -233,6 +234,7 @@ function render() {
 // While browsing an older page the view stays put; new scans are announced instead of shifting rows.
 function applyData(scans, force) {
   latest = scans;
+  hasData = true;
   if (page === 0 || force) {
     view = scans;
     unseen = 0;
