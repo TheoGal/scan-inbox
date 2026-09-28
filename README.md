@@ -45,7 +45,7 @@ the code but use the app completely at your own risk.
 
 **There's no login built in.** Anyone who can reach the site can read and
 add scans. Put it behind a reverse proxy with your own domain and an authorization provider.
-Im using Caddy [Caddy](https://caddyserver.com/) and [Authelia](https://www.authelia.com/)
+Im using [Caddy](https://caddyserver.com/) and [Authelia](https://www.authelia.com/)
 
 **It needs HTTPS.** Browsers only allow camera access on a secure page.
 
