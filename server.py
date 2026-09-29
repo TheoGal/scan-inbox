@@ -11,7 +11,7 @@ Pages come from ./static (usually a bind mount) when a file exists there, otherw
   DELETE /api/scans/<id>
   GET    /healthz
 
-Authentication is NOT handled here: put it behind authentication provider (like Authelia)
+Authentication is NOT handled here: put it behind Authelia (see Caddyfile.snippet)
 and bind the container to 127.0.0.1 only.
 """
 import json
@@ -42,6 +42,9 @@ CONTENT_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".svg": "image/svg+xml",
     ".json": "application/json; charset=utf-8",
+    ".webmanifest": "application/manifest+json",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
     ".txt": "text/plain; charset=utf-8",
     ".map": "application/json",
 }
@@ -214,7 +217,7 @@ class Handler(BaseHTTPRequestHandler):
             target = (base / path.lstrip("/")).resolve()
             if base in target.parents and target.is_file():
                 ctype = CONTENT_TYPES.get(target.suffix.lower(), "application/octet-stream")
-                cache = "public, max-age=86400" if "vendor" in target.parts else "no-cache"
+                cache = "public, max-age=86400" if ("vendor" in target.parts or "icons" in target.parts or target.name == "favicon.ico") else "no-cache"
                 return self._send(200, target.read_bytes(), ctype, {"Cache-Control": cache})
         self._error(404, "not found")
 
