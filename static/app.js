@@ -476,6 +476,13 @@ els.insertText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveInserted(); }
 });
 
+/* ---------- Install as an app ------------------------------------------ */
+
+if ('serviceWorker' in navigator) {
+  // See sw.js: registered only so the browser will offer to install this as an app.
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 /* ---------- Boot ------------------------------------------------------ */
 
 setupScanner();
