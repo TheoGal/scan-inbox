@@ -15,6 +15,8 @@ const els = {
   insertOpen: $('insert-open'), insert: $('insert'), insertText: $('insert-text'),
   insertSave: $('insert-save'), insertCancel: $('insert-cancel'),
   detail: $('detail'), detailText: $('detail-text'), detailCopy: $('detail-copy'), detailClose: $('detail-close'),
+  cameraDiagnostics: $('camera-diagnostics'), cameraDiagnosticsText: $('camera-diagnostics-text'),
+  cameraDiagnosticsRefresh: $('camera-diagnostics-refresh'),
 };
 
 /* ---------- API ------------------------------------------------------- */
@@ -374,11 +376,12 @@ async function startNative(deviceId) {
       height: { ideal: 1080 },
     },
   });
-  try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* not supported */ }
+  try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (error) { showCameraError('Initial autofocus', error); }
   els.video.srcObject = stream;
   await els.video.play();
   setupZoom();
   setupFocus();
+  updateCameraDiagnostics();
   const run = ++loopId;
   const tick = async () => {
     if (run !== loopId) return;
@@ -429,8 +432,69 @@ function setupZoom() {
 els.zoom.addEventListener('input', () => {
   const track = currentTrack();
   if (!track) return;
-  track.applyConstraints({ advanced: [{ zoom: Number(els.zoom.value) }] }).catch(() => {});
+  track.applyConstraints({ advanced: [{ zoom: Number(els.zoom.value) }] })
+    .catch((error) => showCameraError('Zoom', error));
 });
+
+function jsonForDisplay(value) {
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
+
+function showCameraError(action, error) {
+  const name = error && error.name ? error.name : 'Error';
+  const message = error && error.message ? error.message : String(error);
+  setStatus(`${action} failed: ${name}`);
+  if (els.cameraDiagnosticsText) {
+    els.cameraDiagnosticsText.textContent += `\n\n${action} ERROR\n${name}: ${message}`;
+  }
+}
+
+function updateCameraDiagnostics(extra = '') {
+  if (!els.cameraDiagnosticsText) return;
+  const track = currentTrack();
+  if (!track) {
+    els.cameraDiagnosticsText.textContent = 'Camera is not running.';
+    return;
+  }
+  let caps = {};
+  let settings = {};
+  try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch (e) { caps = { error: String(e) }; }
+  try { settings = track.getSettings ? track.getSettings() : {}; } catch (e) { settings = { error: String(e) }; }
+  let constraints = {};
+  try { constraints = navigator.mediaDevices.getSupportedConstraints ? navigator.mediaDevices.getSupportedConstraints() : {}; } catch (e) { constraints = { error: String(e) }; }
+  const relevantCaps = {
+    focusMode: caps.focusMode,
+    focusDistance: caps.focusDistance,
+    pointsOfInterest: caps.pointsOfInterest,
+    zoom: caps.zoom,
+    facingMode: caps.facingMode,
+    width: caps.width,
+    height: caps.height,
+  };
+  const relevantSettings = {
+    deviceId: settings.deviceId,
+    groupId: settings.groupId,
+    facingMode: settings.facingMode,
+    width: settings.width,
+    height: settings.height,
+    frameRate: settings.frameRate,
+    focusMode: settings.focusMode,
+    focusDistance: settings.focusDistance,
+    zoom: settings.zoom,
+  };
+  const supported = {
+    focusMode: constraints.focusMode,
+    focusDistance: constraints.focusDistance,
+    pointsOfInterest: constraints.pointsOfInterest,
+    zoom: constraints.zoom,
+  };
+  els.cameraDiagnosticsText.textContent =
+    `TRACK\n${track.label || '(no camera label reported)'}\nreadyState: ${track.readyState}\n\n` +
+    `SUPPORTED CONSTRAINTS\n${jsonForDisplay(supported)}\n\n` +
+    `CAPABILITIES\n${jsonForDisplay(relevantCaps)}\n\n` +
+    `CURRENT SETTINGS\n${jsonForDisplay(relevantSettings)}` +
+    (extra ? `\n\n${extra}` : '');
+}
 
 // Manual focus distance. Only shown when the device reports both a focusDistance
 // range and a 'manual' focus mode — dragging the slider only has any effect once
@@ -443,6 +507,7 @@ function setupFocus() {
   const hasManual = caps && caps.focusMode && caps.focusMode.includes('manual');
   if (!caps || !hasManual || !caps.focusDistance || caps.focusDistance.min === caps.focusDistance.max) {
     els.focusRow.hidden = true;
+    updateCameraDiagnostics();
     return;
   }
   const settings = track.getSettings ? track.getSettings() : {};
@@ -452,6 +517,7 @@ function setupFocus() {
   els.focus.value = settings.focusDistance ?? caps.focusDistance.min;
   els.focusRow.hidden = false;
   els.focusAuto.hidden = !caps.focusMode.includes('continuous');
+  updateCameraDiagnostics();
 }
 
 els.focus.addEventListener('input', () => {
@@ -459,13 +525,16 @@ els.focus.addEventListener('input', () => {
   if (!track) return;
   track.applyConstraints({
     advanced: [{ focusMode: 'manual', focusDistance: Number(els.focus.value) }],
-  }).catch(() => {});
+  }).then(() => updateCameraDiagnostics('Manual focus constraint applied successfully.'))
+    .catch((error) => showCameraError('Manual focus', error));
 });
 
 els.focusAuto.addEventListener('click', () => {
   const track = currentTrack();
   if (!track) return;
-  track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+  track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] })
+    .then(() => updateCameraDiagnostics('Continuous autofocus constraint applied successfully.'))
+    .catch((error) => showCameraError('Autofocus', error));
 });
 
 // A tap tells the camera where to focus, which is the usual fix for a code held
@@ -475,16 +544,26 @@ els.focusAuto.addEventListener('click', () => {
 els.viewfinder.addEventListener('click', (event) => {
   const track = currentTrack();
   const caps = track && track.getCapabilities ? track.getCapabilities() : null;
-  if (!caps || !caps.focusMode || !caps.focusMode.includes('continuous') || !caps.pointsOfInterest) return;
+  if (!track || !caps || !caps.focusMode || !caps.focusMode.includes('continuous')) {
+    updateCameraDiagnostics('Tap-to-focus: continuous focus is not reported by this camera track.');
+    return;
+  }
   const rect = els.viewfinder.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width;
-  const y = (event.clientY - rect.top) / rect.height;
-  track.applyConstraints({
+  const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+  const constraints = {
     advanced: [{ focusMode: 'continuous', pointsOfInterest: [{ x, y }] }],
-  }).catch(() => {});
-  els.viewfinder.classList.add('focus-tap');
-  setTimeout(() => els.viewfinder.classList.remove('focus-tap'), 400);
+  };
+  track.applyConstraints(constraints)
+    .then(() => {
+      updateCameraDiagnostics(`Tap-to-focus applied successfully.\npoint: x=${x.toFixed(3)}, y=${y.toFixed(3)}`);
+      els.viewfinder.classList.add('focus-tap');
+      setTimeout(() => els.viewfinder.classList.remove('focus-tap'), 400);
+    })
+    .catch((error) => showCameraError(`Tap-to-focus (${x.toFixed(3)}, ${y.toFixed(3)})`, error));
 });
+
+els.cameraDiagnosticsRefresh?.addEventListener('click', updateCameraDiagnostics);
 
 async function startCamera() {
   els.toggle.disabled = true;
@@ -505,6 +584,7 @@ async function startCamera() {
       await scanner.start();
       setupZoom();
       setupFocus();
+      updateCameraDiagnostics();
       setStatus('This browser can only read QR codes, not Data Matrix.');
     }
     setScanning(true);
@@ -522,6 +602,7 @@ function stopCamera() {
   setScanning(false);
   els.zoomRow.hidden = true;
   els.focusRow.hidden = true;
+  if (els.cameraDiagnosticsText) els.cameraDiagnosticsText.textContent = 'Camera is not running.';
 }
 
 els.toggle.addEventListener('click', () => (scanning ? stopCamera() : startCamera()));
