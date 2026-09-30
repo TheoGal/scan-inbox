@@ -8,7 +8,7 @@ const $ = (id) => document.getElementById(id);
 const els = {
   scanner: $('scanner'), viewfinder: $('viewfinder'), video: $('video'), idle: $('idle'),
   toggle: $('toggle'), status: $('status'), zoomRow: $('zoom-row'), zoom: $('zoom'),
-  focusRow: $('focus-row'), focus: $('focus'), focusValue: $('focus-value'),
+  focusRow: $('focus-row'), focus: $('focus'),
   banner: $('banner'), bannerText: $('banner-text'), bannerReload: $('banner-reload'),
   list: $('list'), empty: $('empty'), pager: $('pager'), newer: $('newer'), older: $('older'),
   range: $('range'), unseen: $('unseen'),
@@ -403,10 +403,9 @@ function stopNative() {
 }
 
 /* ---------- Zoom + manual focus ----------------------------------------
-   Focus is deliberately manual for this scanner. The camera track is switched
-   to manual focus and the slider controls focusDistance directly. We expose a
-   deliberately useful close-up range rather than the camera's enormous/
-   effectively-infinite capability range, which is not useful for scanning.
+   Autofocus and tap-to-focus are deliberately not used. The scanner exposes
+   one manual focus slider and sends the selected focus distance directly to
+   the camera track.
 */
 
 function currentTrack() {
@@ -493,38 +492,46 @@ function updateCameraDiagnostics(extra = '') {
     `TRACK\n${track.label || '(no camera label reported)'}\nreadyState: ${track.readyState}\n\n` +
     `SUPPORTED CONSTRAINTS\n${jsonForDisplay(supported)}\n\n` +
     `CAPABILITIES\n${jsonForDisplay(relevantCaps)}\n\n` +
-    `CURRENT SETTINGS\n${jsonForDisplay(relevantSettings)}\n\n` +
-    `SCANNER FOCUS\nManual focus only\nSlider range: ${FOCUS_NEAR_METERS.toFixed(2)} m to ${FOCUS_FAR_METERS.toFixed(2)} m\n` +
-    `0.00 m = infinity; smaller distance = closer focus` +
+    `CURRENT SETTINGS\n${jsonForDisplay(relevantSettings)}` +
     (extra ? `\n\n${extra}` : '');
 }
 
-// The browser reports the camera's focus-distance capability in meters, but
-// some Android camera implementations expose an effectively infinite upper
-// bound. That is not useful for barcode/QR scanning, so keep the UI focused on
-// a practical close-up range. The camera still receives the real focusDistance.
-const FOCUS_NEAR_METERS = 0.10;
+// The camera reports focusDistance in meters, but the useful scanning range is
+// concentrated at close distances. The UI therefore uses a logarithmic control
+// from 8 cm to 2 m. The slider position is converted to the actual API value.
+const FOCUS_NEAR_METERS = 0.08;
 const FOCUS_FAR_METERS = 2.00;
-const FOCUS_DEFAULT_METERS = 0.30;
+const FOCUS_DEFAULT_POSITION = 650;
 
-function updateFocusValue() {
-  if (els.focusValue) {
-    els.focusValue.textContent = `${Number(els.focus.value).toFixed(2)} m`;
-  }
+function sliderToFocusDistance(position) {
+  const t = Number(position) / 1000;
+  return FOCUS_NEAR_METERS * Math.pow(FOCUS_FAR_METERS / FOCUS_NEAR_METERS, t);
 }
 
-async function applyManualFocus(value, statusText = 'Manual focus applied.') {
+let focusApplyTimer = null;
+let focusApplySerial = 0;
+
+async function applyManualFocus(position) {
+  const serial = ++focusApplySerial;
   const track = currentTrack();
   if (!track) return;
-  const distance = Number(value);
+
+  const distance = sliderToFocusDistance(position);
   try {
+    // Use normal constraints rather than an 'advanced' entry. This makes the
+    // requested manual mode + distance the active camera constraints.
     await track.applyConstraints({
-      advanced: [{ focusMode: 'manual', focusDistance: distance }],
+      focusMode: { exact: 'manual' },
+      focusDistance: { exact: distance },
     });
-    updateFocusValue();
-    updateCameraDiagnostics(statusText);
+
+    // Ignore a stale completion if the user moved the slider again meanwhile.
+    if (serial !== focusApplySerial) return;
+    const actual = track.getSettings?.().focusDistance;
+    updateCameraDiagnostics(`Manual focus applied.\nRequested distance: ${distance.toFixed(3)} m\nCamera setting: ${actual}`);
   } catch (error) {
-    showCameraError(`Manual focus (${distance.toFixed(2)} m)`, error);
+    if (serial !== focusApplySerial) return;
+    showCameraError(`Manual focus (${distance.toFixed(3)} m)`, error);
   }
 }
 
@@ -538,39 +545,22 @@ function setupFocus() {
     return;
   }
 
-  // Use a practical scanner range instead of exposing the camera's enormous
-  // capability max (which may be Infinity). Clamp only to the reported range
-  // when it is finite and meaningful.
-  const reportedMin = Number.isFinite(caps.focusDistance.min) ? caps.focusDistance.min : FOCUS_NEAR_METERS;
-  const reportedMax = Number.isFinite(caps.focusDistance.max) ? caps.focusDistance.max : FOCUS_FAR_METERS;
-  const uiMin = Math.max(FOCUS_NEAR_METERS, reportedMin);
-  const uiMax = Math.min(FOCUS_FAR_METERS, reportedMax);
+  els.focus.min = 0;
+  els.focus.max = 1000;
+  els.focus.step = 1;
 
-  if (!(uiMax > uiMin)) {
-    els.focusRow.hidden = true;
-    updateCameraDiagnostics('Manual focus is reported, but no useful scanner focus range is available.');
-    return;
-  }
-
-  els.focus.min = uiMin;
-  els.focus.max = uiMax;
-  els.focus.step = 0.01;
-
-  const current = Number(track.getSettings?.().focusDistance);
-  const initial = Number.isFinite(current) && current > uiMin && current < uiMax
-    ? current
-    : Math.min(Math.max(FOCUS_DEFAULT_METERS, uiMin), uiMax);
-  els.focus.value = initial;
-  updateFocusValue();
+  // Start at a useful close scanning distance, then explicitly switch the
+  // track into manual mode before the user touches the slider.
+  els.focus.value = FOCUS_DEFAULT_POSITION;
   els.focusRow.hidden = false;
-
-  // Explicitly put the camera into manual focus as soon as it starts.
-  applyManualFocus(initial, `Manual focus enabled at ${initial.toFixed(2)} m.`);
+  applyManualFocus(els.focus.value);
 }
 
 els.focus.addEventListener('input', () => {
-  updateFocusValue();
-  applyManualFocus(els.focus.value, `Manual focus set to ${Number(els.focus.value).toFixed(2)} m.`);
+  // Debounce while dragging so Android isn't handed dozens of overlapping
+  // camera constraint requests during one finger movement.
+  clearTimeout(focusApplyTimer);
+  focusApplyTimer = setTimeout(() => applyManualFocus(els.focus.value), 35);
 });
 
 els.cameraDiagnosticsRefresh?.addEventListener('click', updateCameraDiagnostics);
