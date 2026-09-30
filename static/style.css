@@ -134,6 +134,35 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 .viewfinder:not(.on) .corner { opacity: 0.25; }
 .viewfinder.hit .corner { border-color: var(--hit); opacity: 1; }
 
+/* Brief ring flash where the user tapped to focus. */
+.viewfinder.focus-tap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  animation: focus-flash 0.4s ease-out;
+  pointer-events: none;
+}
+@keyframes focus-flash { from { opacity: 1; } to { opacity: 0; } }
+
+.zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.zoom-row[hidden] { display: none; }
+.zoom-icon { color: var(--muted); font-size: 1rem; line-height: 1; user-select: none; }
+.zoom-row input[type="range"] {
+  flex: 1;
+  height: 1.75rem; /* generous hit target for a thumb on a phone */
+  accent-color: var(--accent);
+}
+
+.hint { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.viewfinder:not(.on) ~ .hint { display: none; }
+
 .controls {
   display: flex;
   flex-wrap: wrap;

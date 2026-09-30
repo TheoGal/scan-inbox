@@ -35,10 +35,16 @@
         <span class="corner bl"></span><span class="corner br"></span>
         <p id="idle" class="idle">Camera is off</p>
       </div>
+      <div id="zoom-row" class="zoom-row" hidden>
+        <span class="zoom-icon" aria-hidden="true">&minus;</span>
+        <input id="zoom" type="range" min="0" max="1" step="0.01" value="0" aria-label="Camera zoom">
+        <span class="zoom-icon" aria-hidden="true">+</span>
+      </div>
       <div class="controls">
         <button id="toggle" class="primary" type="button">Start camera</button>
         <span id="status" class="status" role="status" aria-live="polite"></span>
       </div>
+      <p class="hint">Tap the preview to focus on a close-up code.</p>
     </section>
 
     <section id="results" class="results" aria-label="Scans">

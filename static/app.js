@@ -7,7 +7,7 @@ const PENDING_KEY = 'scan-inbox.pending';
 const $ = (id) => document.getElementById(id);
 const els = {
   scanner: $('scanner'), viewfinder: $('viewfinder'), video: $('video'), idle: $('idle'),
-  toggle: $('toggle'), status: $('status'),
+  toggle: $('toggle'), status: $('status'), zoomRow: $('zoom-row'), zoom: $('zoom'),
   banner: $('banner'), bannerText: $('banner-text'), bannerReload: $('banner-reload'),
   list: $('list'), empty: $('empty'), pager: $('pager'), newer: $('newer'), older: $('older'),
   range: $('range'), unseen: $('unseen'),
@@ -376,6 +376,7 @@ async function startNative(deviceId) {
   try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* not supported */ }
   els.video.srcObject = stream;
   await els.video.play();
+  setupZoom();
   const run = ++loopId;
   const tick = async () => {
     if (run !== loopId) return;
@@ -397,6 +398,54 @@ function stopNative() {
   els.video.srcObject = null;
 }
 
+/* ---------- Zoom + tap-to-focus ----------------------------------------
+   Both use the standard MediaTrackCapabilities/applyConstraints API, which
+   only Chromium-based browsers on Android currently expose to web pages —
+   iOS Safari and desktop browsers simply never report the capability, so
+   these controls quietly stay hidden/inert there instead of erroring. */
+
+function currentTrack() {
+  const t = els.video.srcObject && els.video.srcObject.getVideoTracks()[0];
+  return t && t.readyState === 'live' ? t : null;
+}
+
+function setupZoom() {
+  const track = currentTrack();
+  const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+  if (!caps || !caps.zoom || caps.zoom.min === caps.zoom.max) {
+    els.zoomRow.hidden = true;
+    return;
+  }
+  const settings = track.getSettings ? track.getSettings() : {};
+  els.zoom.min = caps.zoom.min;
+  els.zoom.max = caps.zoom.max;
+  els.zoom.step = caps.zoom.step || 0.1;
+  els.zoom.value = settings.zoom || caps.zoom.min;
+  els.zoomRow.hidden = false;
+}
+
+els.zoom.addEventListener('input', () => {
+  const track = currentTrack();
+  if (!track) return;
+  track.applyConstraints({ advanced: [{ zoom: Number(els.zoom.value) }] }).catch(() => {});
+});
+
+// A tap tells the camera where to focus, which is the usual fix for a code held
+// close enough to fill the frame — phones often can't autofocus that near by default.
+els.viewfinder.addEventListener('click', (event) => {
+  const track = currentTrack();
+  const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+  if (!caps || !caps.focusMode || !caps.focusMode.includes('manual')) return;
+  const rect = els.viewfinder.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width;
+  const y = (event.clientY - rect.top) / rect.height;
+  track.applyConstraints({
+    advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x, y }] }],
+  }).catch(() => {});
+  els.viewfinder.classList.add('focus-tap');
+  setTimeout(() => els.viewfinder.classList.remove('focus-tap'), 400);
+});
+
 async function startCamera() {
   els.toggle.disabled = true;
   try {
@@ -414,6 +463,7 @@ async function startCamera() {
         });
       }
       await scanner.start();
+      setupZoom();
       setStatus('This browser can only read QR codes, not Data Matrix.');
     }
     setScanning(true);
@@ -429,6 +479,7 @@ function stopCamera() {
   if (scanner) scanner.stop();
   stopNative();
   setScanning(false);
+  els.zoomRow.hidden = true;
 }
 
 els.toggle.addEventListener('click', () => (scanning ? stopCamera() : startCamera()));
