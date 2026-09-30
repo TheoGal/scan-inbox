@@ -146,19 +146,21 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 }
 @keyframes focus-flash { from { opacity: 1; } to { opacity: 0; } }
 
-.zoom-row {
+.slider-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   margin-top: 0.6rem;
 }
-.zoom-row[hidden] { display: none; }
-.zoom-icon { color: var(--muted); font-size: 1rem; line-height: 1; user-select: none; }
-.zoom-row input[type="range"] {
+.slider-row[hidden] { display: none; }
+.slider-icon { color: var(--muted); font-size: 1rem; line-height: 1; user-select: none; }
+.slider-row input[type="range"] {
   flex: 1;
   height: 1.75rem; /* generous hit target for a thumb on a phone */
   accent-color: var(--accent);
 }
+.slider-row .linklike { flex: none; padding: 0.2rem 0; }
+.slider-row .linklike[hidden] { display: none; }
 
 .hint { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.85rem; }
 .viewfinder:not(.on) ~ .hint { display: none; }

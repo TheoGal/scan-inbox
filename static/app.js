@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 const els = {
   scanner: $('scanner'), viewfinder: $('viewfinder'), video: $('video'), idle: $('idle'),
   toggle: $('toggle'), status: $('status'), zoomRow: $('zoom-row'), zoom: $('zoom'),
+  focusRow: $('focus-row'), focus: $('focus'), focusAuto: $('focus-auto'),
   banner: $('banner'), bannerText: $('banner-text'), bannerReload: $('banner-reload'),
   list: $('list'), empty: $('empty'), pager: $('pager'), newer: $('newer'), older: $('older'),
   range: $('range'), unseen: $('unseen'),
@@ -377,6 +378,7 @@ async function startNative(deviceId) {
   els.video.srcObject = stream;
   await els.video.play();
   setupZoom();
+  setupFocus();
   const run = ++loopId;
   const tick = async () => {
     if (run !== loopId) return;
@@ -430,17 +432,55 @@ els.zoom.addEventListener('input', () => {
   track.applyConstraints({ advanced: [{ zoom: Number(els.zoom.value) }] }).catch(() => {});
 });
 
+// Manual focus distance. Only shown when the device reports both a focusDistance
+// range and a 'manual' focus mode — dragging the slider only has any effect once
+// focusMode is actually switched to manual, so both are set together on every move.
+// This moves the lens within whatever range the hardware supports; it cannot make
+// a camera focus closer than its own minimum focus distance allows.
+function setupFocus() {
+  const track = currentTrack();
+  const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+  const hasManual = caps && caps.focusMode && caps.focusMode.includes('manual');
+  if (!caps || !hasManual || !caps.focusDistance || caps.focusDistance.min === caps.focusDistance.max) {
+    els.focusRow.hidden = true;
+    return;
+  }
+  const settings = track.getSettings ? track.getSettings() : {};
+  els.focus.min = caps.focusDistance.min;
+  els.focus.max = caps.focusDistance.max;
+  els.focus.step = caps.focusDistance.step || 0.01;
+  els.focus.value = settings.focusDistance ?? caps.focusDistance.min;
+  els.focusRow.hidden = false;
+  els.focusAuto.hidden = !caps.focusMode.includes('continuous');
+}
+
+els.focus.addEventListener('input', () => {
+  const track = currentTrack();
+  if (!track) return;
+  track.applyConstraints({
+    advanced: [{ focusMode: 'manual', focusDistance: Number(els.focus.value) }],
+  }).catch(() => {});
+});
+
+els.focusAuto.addEventListener('click', () => {
+  const track = currentTrack();
+  if (!track) return;
+  track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+});
+
 // A tap tells the camera where to focus, which is the usual fix for a code held
 // close enough to fill the frame — phones often can't autofocus that near by default.
+// This only applies while in continuous autofocus; dragging the slider above takes
+// manual control instead, and a further tap won't override it.
 els.viewfinder.addEventListener('click', (event) => {
   const track = currentTrack();
   const caps = track && track.getCapabilities ? track.getCapabilities() : null;
-  if (!caps || !caps.focusMode || !caps.focusMode.includes('manual')) return;
+  if (!caps || !caps.focusMode || !caps.focusMode.includes('continuous') || !caps.pointsOfInterest) return;
   const rect = els.viewfinder.getBoundingClientRect();
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
   track.applyConstraints({
-    advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x, y }] }],
+    advanced: [{ focusMode: 'continuous', pointsOfInterest: [{ x, y }] }],
   }).catch(() => {});
   els.viewfinder.classList.add('focus-tap');
   setTimeout(() => els.viewfinder.classList.remove('focus-tap'), 400);
@@ -464,6 +504,7 @@ async function startCamera() {
       }
       await scanner.start();
       setupZoom();
+      setupFocus();
       setStatus('This browser can only read QR codes, not Data Matrix.');
     }
     setScanning(true);
@@ -480,6 +521,7 @@ function stopCamera() {
   stopNative();
   setScanning(false);
   els.zoomRow.hidden = true;
+  els.focusRow.hidden = true;
 }
 
 els.toggle.addEventListener('click', () => (scanning ? stopCamera() : startCamera()));

@@ -35,10 +35,15 @@
         <span class="corner bl"></span><span class="corner br"></span>
         <p id="idle" class="idle">Camera is off</p>
       </div>
-      <div id="zoom-row" class="zoom-row" hidden>
-        <span class="zoom-icon" aria-hidden="true">&minus;</span>
+      <div id="zoom-row" class="slider-row" hidden>
+        <span class="slider-icon" aria-hidden="true">&minus;</span>
         <input id="zoom" type="range" min="0" max="1" step="0.01" value="0" aria-label="Camera zoom">
-        <span class="zoom-icon" aria-hidden="true">+</span>
+        <span class="slider-icon" aria-hidden="true">+</span>
+      </div>
+      <div id="focus-row" class="slider-row" hidden>
+        <span class="slider-icon" aria-hidden="true">&#128065;</span>
+        <input id="focus" type="range" min="0" max="1" step="0.01" value="0" aria-label="Manual focus">
+        <button id="focus-auto" class="linklike" type="button" hidden>Auto</button>
       </div>
       <div class="controls">
         <button id="toggle" class="primary" type="button">Start camera</button>
