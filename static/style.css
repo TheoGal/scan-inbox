@@ -20,7 +20,7 @@
 
 * { box-sizing: border-box; }
 
-html { background: var(--bg); }
+html { background: var(--bg); touch-action: pan-x pan-y; }
 
 body {
   margin: 0;
@@ -28,6 +28,7 @@ body {
   background: var(--bg);
   font: 16px/1.5 var(--sans);
   -webkit-text-size-adjust: 100%;
+  touch-action: pan-x pan-y;
 }
 
 main {
@@ -163,6 +164,14 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 .slider-row .linklike[hidden] { display: none; }
 
 ''.hint { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.85rem; }
+
+.slider-value {
+  min-width: 3.8rem;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
 
 .camera-diagnostics {
   margin-top: 0.75rem;
