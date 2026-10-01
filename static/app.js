@@ -7,16 +7,15 @@ const PENDING_KEY = 'scan-inbox.pending';
 const $ = (id) => document.getElementById(id);
 const els = {
   scanner: $('scanner'), viewfinder: $('viewfinder'), video: $('video'), idle: $('idle'),
-  toggle: $('toggle'), status: $('status'), zoomRow: $('zoom-row'), zoom: $('zoom'),
-  focusRow: $('focus-row'), focus: $('focus'),
+  toggle: $('toggle'), status: $('status'),
+  insertOpen: $('insert-open'), photoOpen: $('photo-open'), uploadOpen: $('upload-open'),
+  photoInput: $('photo-input'), uploadInput: $('upload-input'),
   banner: $('banner'), bannerText: $('banner-text'), bannerReload: $('banner-reload'),
   list: $('list'), empty: $('empty'), pager: $('pager'), newer: $('newer'), older: $('older'),
   range: $('range'), unseen: $('unseen'),
-  insertOpen: $('insert-open'), insert: $('insert'), insertText: $('insert-text'),
+  insert: $('insert'), insertText: $('insert-text'),
   insertSave: $('insert-save'), insertCancel: $('insert-cancel'),
   detail: $('detail'), detailText: $('detail-text'), detailCopy: $('detail-copy'), detailClose: $('detail-close'),
-  cameraDiagnostics: $('camera-diagnostics'), cameraDiagnosticsText: $('camera-diagnostics-text'),
-  cameraDiagnosticsRefresh: $('camera-diagnostics-refresh'),
 };
 
 /* ---------- API ------------------------------------------------------- */
@@ -379,8 +378,6 @@ async function startNative(deviceId) {
   els.video.srcObject = stream;
   await els.video.play();
   setupZoom();
-  setupFocus();
-  updateCameraDiagnostics();
   const run = ++loopId;
   const tick = async () => {
     if (run !== loopId) return;
@@ -402,10 +399,9 @@ function stopNative() {
   els.video.srcObject = null;
 }
 
-/* ---------- Zoom + manual focus ----------------------------------------
-   Autofocus and tap-to-focus are deliberately not used. The scanner exposes
-   one manual focus slider and sends the selected focus distance directly to
-   the camera track.
+/* ---------- Camera zoom ------------------------------------------------
+   Zoom is controlled by a two-finger pinch directly on the camera preview.
+   Browser/page zoom remains disabled; only the camera track is changed here.
 */
 
 function currentTrack() {
@@ -413,157 +409,139 @@ function currentTrack() {
   return t && t.readyState === 'live' ? t : null;
 }
 
+let zoomCaps = null;
+let currentZoom = 1;
+const pinchPointers = new Map();
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+let pinchActive = false;
+let zoomApplyTimer = null;
+
 function setupZoom() {
   const track = currentTrack();
   const caps = track && track.getCapabilities ? track.getCapabilities() : null;
-  if (!caps || !caps.zoom || caps.zoom.min === caps.zoom.max) {
-    els.zoomRow.hidden = true;
-    return;
-  }
+  zoomCaps = caps && caps.zoom && caps.zoom.min !== caps.zoom.max ? caps.zoom : null;
+  if (!zoomCaps) return;
   const settings = track.getSettings ? track.getSettings() : {};
-  els.zoom.min = caps.zoom.min;
-  els.zoom.max = caps.zoom.max;
-  els.zoom.step = caps.zoom.step || 0.1;
-  els.zoom.value = settings.zoom || caps.zoom.min;
-  els.zoomRow.hidden = false;
+  currentZoom = Number(settings.zoom ?? zoomCaps.min);
 }
 
-els.zoom.addEventListener('input', () => {
+function clampZoom(value) {
+  if (!zoomCaps) return value;
+  return Math.min(zoomCaps.max, Math.max(zoomCaps.min, value));
+}
+
+function pointerDistance() {
+  const points = [...pinchPointers.values()];
+  if (points.length < 2) return 0;
+  return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+}
+
+function applyPinchZoom(value) {
   const track = currentTrack();
-  if (!track) return;
-  track.applyConstraints({ advanced: [{ zoom: Number(els.zoom.value) }] })
-    .then(() => updateCameraDiagnostics())
-    .catch((error) => showCameraError('Zoom', error));
+  if (!track || !zoomCaps) return;
+  const next = clampZoom(value);
+  currentZoom = next;
+  clearTimeout(zoomApplyTimer);
+  zoomApplyTimer = setTimeout(() => {
+    track.applyConstraints({ advanced: [{ zoom: next }] }).catch(() => {});
+  }, 0);
+}
+
+els.viewfinder.addEventListener('pointerdown', (event) => {
+  if (!scanning || !zoomCaps) return;
+  pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  els.viewfinder.setPointerCapture?.(event.pointerId);
+  if (pinchPointers.size === 2) {
+    pinchActive = true;
+    pinchStartDistance = pointerDistance();
+    pinchStartZoom = currentZoom;
+    event.preventDefault();
+  }
 });
 
-function jsonForDisplay(value) {
-  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
-}
+els.viewfinder.addEventListener('pointermove', (event) => {
+  if (!pinchPointers.has(event.pointerId)) return;
+  pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (!pinchActive || pinchPointers.size < 2 || !pinchStartDistance) return;
+  const distance = pointerDistance();
+  const ratio = distance / pinchStartDistance;
+  applyPinchZoom(pinchStartZoom * ratio);
+  event.preventDefault();
+});
 
-function showCameraError(action, error) {
-  const name = error && error.name ? error.name : 'Error';
-  const message = error && error.message ? error.message : String(error);
-  setStatus(`${action} failed: ${name}`);
-  if (els.cameraDiagnosticsText) {
-    els.cameraDiagnosticsText.textContent += `\n\n${action} ERROR\n${name}: ${message}`;
+function endPinch(event) {
+  pinchPointers.delete(event.pointerId);
+  if (pinchPointers.size < 2) pinchActive = false;
+}
+els.viewfinder.addEventListener('pointerup', endPinch);
+els.viewfinder.addEventListener('pointercancel', endPinch);
+els.viewfinder.addEventListener('pointerleave', (event) => {
+  if (event.pointerType !== 'touch') endPinch(event);
+});
+
+async function decodeImage(image) {
+  await initEngine();
+
+  if (detector) {
+    const codes = await detector.detect(image);
+    if (codes.length) return codes[0].rawValue;
   }
-}
 
-function updateCameraDiagnostics(extra = '') {
-  if (!els.cameraDiagnosticsText) return;
-  const track = currentTrack();
-  if (!track) {
-    els.cameraDiagnosticsText.textContent = 'Camera is not running.';
-    return;
-  }
-  let caps = {};
-  let settings = {};
-  try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch (e) { caps = { error: String(e) }; }
-  try { settings = track.getSettings ? track.getSettings() : {}; } catch (e) { settings = { error: String(e) }; }
-  let constraints = {};
-  try { constraints = navigator.mediaDevices.getSupportedConstraints ? navigator.mediaDevices.getSupportedConstraints() : {}; } catch (e) { constraints = { error: String(e) }; }
-  const relevantCaps = {
-    focusMode: caps.focusMode,
-    focusDistance: caps.focusDistance,
-    pointsOfInterest: caps.pointsOfInterest,
-    zoom: caps.zoom,
-    facingMode: caps.facingMode,
-    width: caps.width,
-    height: caps.height,
-  };
-  const relevantSettings = {
-    deviceId: settings.deviceId,
-    groupId: settings.groupId,
-    facingMode: settings.facingMode,
-    width: settings.width,
-    height: settings.height,
-    frameRate: settings.frameRate,
-    focusMode: settings.focusMode,
-    focusDistance: settings.focusDistance,
-    zoom: settings.zoom,
-  };
-  const supported = {
-    focusMode: constraints.focusMode,
-    focusDistance: constraints.focusDistance,
-    pointsOfInterest: constraints.pointsOfInterest,
-    zoom: constraints.zoom,
-  };
-  els.cameraDiagnosticsText.textContent =
-    `TRACK\n${track.label || '(no camera label reported)'}\nreadyState: ${track.readyState}\n\n` +
-    `SUPPORTED CONSTRAINTS\n${jsonForDisplay(supported)}\n\n` +
-    `CAPABILITIES\n${jsonForDisplay(relevantCaps)}\n\n` +
-    `CURRENT SETTINGS\n${jsonForDisplay(relevantSettings)}` +
-    (extra ? `\n\n${extra}` : '');
-}
-
-// The camera reports focusDistance in meters, but the useful scanning range is
-// concentrated at close distances. The UI therefore uses a logarithmic control
-// from 8 cm to 2 m. The slider position is converted to the actual API value.
-const FOCUS_NEAR_METERS = 0.08;
-const FOCUS_FAR_METERS = 2.00;
-const FOCUS_DEFAULT_POSITION = 650;
-
-function sliderToFocusDistance(position) {
-  const t = Number(position) / 1000;
-  return FOCUS_NEAR_METERS * Math.pow(FOCUS_FAR_METERS / FOCUS_NEAR_METERS, t);
-}
-
-let focusApplyTimer = null;
-let focusApplySerial = 0;
-
-async function applyManualFocus(position) {
-  const serial = ++focusApplySerial;
-  const track = currentTrack();
-  if (!track) return;
-
-  const distance = sliderToFocusDistance(position);
+  // qr-scanner provides a useful fallback on browsers without BarcodeDetector.
   try {
-    // Use normal constraints rather than an 'advanced' entry. This makes the
-    // requested manual mode + distance the active camera constraints.
-    await track.applyConstraints({
-      focusMode: { exact: 'manual' },
-      focusDistance: { exact: distance },
+    const result = await QrScanner.scanImage(image, {
+      returnDetailedScanResult: true,
+      alsoTryWithoutScanRegion: true,
     });
-
-    // Ignore a stale completion if the user moved the slider again meanwhile.
-    if (serial !== focusApplySerial) return;
-    const actual = track.getSettings?.().focusDistance;
-    updateCameraDiagnostics(`Manual focus applied.\nRequested distance: ${distance.toFixed(3)} m\nCamera setting: ${actual}`);
-  } catch (error) {
-    if (serial !== focusApplySerial) return;
-    showCameraError(`Manual focus (${distance.toFixed(3)} m)`, error);
+    return result?.data || result || null;
+  } catch {
+    return null;
   }
 }
 
-function setupFocus() {
-  const track = currentTrack();
-  const caps = track && track.getCapabilities ? track.getCapabilities() : null;
-  const hasManual = caps && Array.isArray(caps.focusMode) && caps.focusMode.includes('manual');
-  if (!caps || !hasManual || !caps.focusDistance) {
-    els.focusRow.hidden = true;
-    updateCameraDiagnostics('Manual focus is not exposed by this camera track.');
+async function scanStillFile(file) {
+  if (!file) return;
+  setStatus('Scanning image…');
+  try {
+    const bitmap = await createImageBitmap(file);
+    try {
+      const text = await decodeImage(bitmap);
+      if (!text) {
+        setStatus('No barcode or QR code found.');
+        return;
+      }
+      onDecode({ data: text });
+    } finally {
+      bitmap.close?.();
+    }
+  } catch (error) {
+    setStatus(`Could not scan image: ${error.message || error}`);
+  }
+}
+
+async function takeAndScanCurrentFrame() {
+  const video = els.video;
+  if (!scanning || video.readyState < 2) {
+    setStatus('Start the camera first.');
     return;
   }
-
-  els.focus.min = 0;
-  els.focus.max = 1000;
-  els.focus.step = 1;
-
-  // Start at a useful close scanning distance, then explicitly switch the
-  // track into manual mode before the user touches the slider.
-  els.focus.value = FOCUS_DEFAULT_POSITION;
-  els.focusRow.hidden = false;
-  applyManualFocus(els.focus.value);
+  try {
+    setStatus('Scanning photo…');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const text = await decodeImage(canvas);
+    if (!text) {
+      setStatus('No barcode or QR code found.');
+      return;
+    }
+    onDecode({ data: text });
+  } catch (error) {
+    setStatus(`Could not scan photo: ${error.message || error}`);
+  }
 }
-
-els.focus.addEventListener('input', () => {
-  // Debounce while dragging so Android isn't handed dozens of overlapping
-  // camera constraint requests during one finger movement.
-  clearTimeout(focusApplyTimer);
-  focusApplyTimer = setTimeout(() => applyManualFocus(els.focus.value), 35);
-});
-
-els.cameraDiagnosticsRefresh?.addEventListener('click', updateCameraDiagnostics);
 
 async function startCamera() {
   els.toggle.disabled = true;
@@ -583,8 +561,6 @@ async function startCamera() {
       }
       await scanner.start();
       setupZoom();
-      setupFocus();
-      updateCameraDiagnostics();
       setStatus('This browser can only read QR codes, not Data Matrix.');
     }
     setScanning(true);
@@ -600,9 +576,9 @@ function stopCamera() {
   if (scanner) scanner.stop();
   stopNative();
   setScanning(false);
-  els.zoomRow.hidden = true;
-  els.focusRow.hidden = true;
-  if (els.cameraDiagnosticsText) els.cameraDiagnosticsText.textContent = 'Camera is not running.';
+  zoomCaps = null;
+  pinchPointers.clear();
+  pinchActive = false;
 }
 
 els.toggle.addEventListener('click', () => (scanning ? stopCamera() : startCamera()));
@@ -627,6 +603,30 @@ async function setupScanner() {
   try { hasCamera = await QrScanner.hasCamera(); } catch { /* treat as no camera */ }
   els.scanner.hidden = !hasCamera;
 }
+
+/* ---------- Still images ------------------------------------------------ */
+
+els.photoOpen.addEventListener('click', () => {
+  // On phones this invokes the system camera. The returned photo is scanned
+  // as an image, independently of the live camera preview.
+  els.photoInput.value = '';
+  els.photoInput.click();
+});
+els.photoInput.addEventListener('change', () => {
+  const file = els.photoInput.files?.[0];
+  if (file) scanStillFile(file);
+});
+
+els.uploadOpen.addEventListener('click', () => {
+  els.uploadInput.value = '';
+  els.uploadInput.click();
+});
+els.uploadInput.addEventListener('change', () => {
+  const file = els.uploadInput.files?.[0];
+  if (file) scanStillFile(file);
+});
+
+els.video.addEventListener('dblclick', (event) => event.preventDefault());
 
 /* ---------- Insert text manually --------------------------------------- */
 

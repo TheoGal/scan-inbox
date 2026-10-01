@@ -20,12 +20,27 @@
   <main>
     <header class="top">
       <h1>Scan inbox</h1>
-      <button id="insert-open" class="linklike" type="button">Insert text</button>
     </header>
 
     <div id="banner" class="banner" role="alert" hidden>
       <span id="banner-text"></span>
       <button id="banner-reload" type="button" hidden>Reload</button>
+    </div>
+
+    <div class="source-controls" aria-label="Scan sources">
+      <button id="toggle" class="primary camera-start" type="button">Start camera</button>
+      <button id="insert-open" class="icon-button" type="button" aria-label="Insert text" title="Insert text">
+        <span class="icon" aria-hidden="true">T</span><span>Text</span>
+      </button>
+      <button id="photo-open" class="icon-button" type="button" aria-label="Take a photo and scan it" title="Take a photo and scan it">
+        <span class="icon icon-camera" aria-hidden="true"></span><span>Photo</span>
+      </button>
+      <button id="upload-open" class="icon-button" type="button" aria-label="Upload an image to scan" title="Upload an image to scan">
+        <span class="icon icon-upload" aria-hidden="true"></span><span>Upload</span>
+      </button>
+      <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
+      <input id="upload-input" type="file" accept="image/*" hidden>
+      <span id="status" class="status" role="status" aria-live="polite"></span>
     </div>
 
     <section id="scanner" class="scanner" aria-label="Scanner">
@@ -35,26 +50,6 @@
         <span class="corner bl"></span><span class="corner br"></span>
         <p id="idle" class="idle">Camera is off</p>
       </div>
-      <div id="zoom-row" class="slider-row" hidden>
-        <span class="slider-icon" aria-hidden="true">&minus;</span>
-        <input id="zoom" type="range" min="0" max="1" step="0.01" value="0" aria-label="Camera zoom">
-        <span class="slider-icon" aria-hidden="true">+</span>
-      </div>
-      <div id="focus-row" class="slider-row" hidden>
-        <span class="slider-icon" aria-hidden="true">&#128065;</span>
-        <input id="focus" type="range" min="0" max="1000" step="1" value="500" aria-label="Manual focus">
-      </div>
-      <div class="controls">
-        <button id="toggle" class="primary" type="button">Start camera</button>
-        <span id="status" class="status" role="status" aria-live="polite"></span>
-      </div>
-      <p class="hint">Use the focus slider to bring close-up barcodes and QR codes into focus.</p>
-
-      <details id="camera-diagnostics" class="camera-diagnostics">
-        <summary>Camera diagnostics</summary>
-        <pre id="camera-diagnostics-text">Start the camera to inspect its capabilities.</pre>
-        <button id="camera-diagnostics-refresh" class="linklike" type="button">Refresh diagnostics</button>
-      </details>
     </section>
 
     <section id="results" class="results" aria-label="Scans">

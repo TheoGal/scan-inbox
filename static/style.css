@@ -88,10 +88,92 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
   cursor: pointer;
 }
 
+/* ---- scan source controls ------------------------------------------- */
+.source-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.source-controls button {
+  min-height: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.source-controls .primary {
+  padding: 0.65rem 1rem;
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+}
+.icon-button:hover { border-color: var(--accent); }
+.icon-button .icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+}
+.icon-camera, .icon-upload {
+  position: relative;
+  border: 1.8px solid currentColor;
+  border-radius: 3px;
+}
+.icon-camera::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: -0.28rem;
+  width: 0.42rem;
+  height: 0.22rem;
+  border: 1.8px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+}
+.icon-camera::after {
+  content: "";
+  width: 0.38rem;
+  height: 0.38rem;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.icon-upload {
+  border: 0;
+}
+.icon-upload::before {
+  content: "↑";
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.status { color: var(--muted); font-size: 0.9rem; }
+
 /* ---- scanner --------------------------------------------------------- */
+
 .scanner[hidden] { display: none; }
 
 .viewfinder {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -135,90 +217,7 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 .viewfinder:not(.on) .corner { opacity: 0.25; }
 .viewfinder.hit .corner { border-color: var(--hit); opacity: 1; }
 
-/* Brief ring flash where the user tapped to focus. */
-.viewfinder.focus-tap::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 2px var(--accent);
-  animation: focus-flash 0.4s ease-out;
-  pointer-events: none;
-}
-@keyframes focus-flash { from { opacity: 1; } to { opacity: 0; } }
 
-.slider-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.6rem;
-}
-.slider-row[hidden] { display: none; }
-.slider-icon { color: var(--muted); font-size: 1rem; line-height: 1; user-select: none; }
-.slider-row input[type="range"] {
-  flex: 1;
-  height: 1.75rem; /* generous hit target for a thumb on a phone */
-  accent-color: var(--accent);
-}
-.slider-row .linklike { flex: none; padding: 0.2rem 0; }
-.slider-row .linklike[hidden] { display: none; }
-
-''.hint { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.85rem; }
-
-.slider-value {
-  min-width: 3.8rem;
-  text-align: right;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
-}
-
-.camera-diagnostics {
-  margin-top: 0.75rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-.camera-diagnostics summary {
-  cursor: pointer;
-  user-select: none;
-}
-.camera-diagnostics pre {
-  margin: 0.5rem 0;
-  padding: 0.7rem;
-  max-height: 20rem;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgb(0 0 0 / 0.18);
-  color: var(--text);
-  font: 0.72rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.viewfinder:not(.on) ~ .hint { display: none; }
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 0.75rem;
-  min-height: 2.75rem;
-}
-
-button.primary {
-  padding: 0.65rem 1.1rem;
-  border: 0;
-  border-radius: 10px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-button.primary:active { filter: brightness(0.92); }
-
-.status { color: var(--muted); font-size: 0.9rem; }
 
 
 /* ---- list ------------------------------------------------------------ */
@@ -306,6 +305,7 @@ dialog pre { max-height: 60vh; margin: 0 0 1rem; overflow: auto; color: var(--pa
   html, body { height: 100%; overflow: hidden; }
   main { display: flex; flex-direction: column; height: 100dvh; max-width: 64rem; padding-bottom: 1rem; }
   .scanner { display: none; }
+  .camera-start { display: none; }
   .results { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .tape { flex: 1; min-height: 0; overflow: hidden; }
   .scan { grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 0 1rem; align-items: center; height: var(--row-h); padding: 0 0.25rem; }
