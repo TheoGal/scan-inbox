@@ -30,11 +30,9 @@ seconds later.
 - Each scan is saved to a small database on the server.
 - Open the same site on another device to see the list of everything
   scanned, newest first.
-- Don't have a code to scan? Use the **Insert text** button to type or paste
-  something in directly - it's saved the same way.
-- Scans older than 6 months are cleaned up automatically.
+- Having trouble with scanning a code? Use the **Insert text** to manually save a block of text, or **take photo** and **upload photo** to use the scanner on photos.
 - On a desktop screen the camera is hidden - desktop is for reading results,
-  phones are for scanning. The list there is paged so it never scrolls; on
+  phones are for scanning. The list on desktops is paged so it never scrolls; on
   a phone it pages 10 at a time.
 
 ## Before you deploy this - disclaimer
