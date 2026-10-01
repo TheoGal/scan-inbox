@@ -117,51 +117,22 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 }
 
 .icon-button {
+  width: 2.75rem;
+  padding: 0.55rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.55rem 0.8rem;
 }
 .icon-button:hover { border-color: var(--accent); }
 .icon-button .icon {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
   flex: none;
-  display: inline-grid;
-  place-items: center;
-  font-weight: 700;
-}
-.icon-camera, .icon-upload {
-  position: relative;
-  border: 1.8px solid currentColor;
-  border-radius: 3px;
-}
-.icon-camera::before {
-  content: "";
-  position: absolute;
-  left: 0.25rem;
-  top: -0.28rem;
-  width: 0.42rem;
-  height: 0.22rem;
-  border: 1.8px solid currentColor;
-  border-bottom: 0;
-  border-radius: 2px 2px 0 0;
-}
-.icon-camera::after {
-  content: "";
-  width: 0.38rem;
-  height: 0.38rem;
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
-}
-.icon-upload {
-  border: 0;
-}
-.icon-upload::before {
-  content: "↑";
-  font-size: 1.25rem;
-  line-height: 1;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .status { color: var(--muted); font-size: 0.9rem; }
