@@ -520,29 +520,6 @@ async function scanStillFile(file) {
   }
 }
 
-async function takeAndScanCurrentFrame() {
-  const video = els.video;
-  if (!scanning || video.readyState < 2) {
-    setStatus('Start the camera first.');
-    return;
-  }
-  try {
-    setStatus('Scanning photo…');
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    const text = await decodeImage(canvas);
-    if (!text) {
-      setStatus('No barcode or QR code found.');
-      return;
-    }
-    onDecode({ data: text });
-  } catch (error) {
-    setStatus(`Could not scan photo: ${error.message || error}`);
-  }
-}
-
 async function startCamera() {
   els.toggle.disabled = true;
   try {

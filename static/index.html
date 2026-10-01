@@ -20,27 +20,26 @@
   <main>
     <header class="top">
       <h1>Scan inbox</h1>
+      <div class="source-controls" aria-label="Scan sources">
+        <button id="toggle" class="primary camera-only" type="button">Start camera</button>
+        <button id="insert-open" class="icon-button" type="button" aria-label="Insert text" title="Insert text">
+          <svg class="icon icon-text" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v14M8 19h8"/></svg>
+        </button>
+        <button id="photo-open" class="icon-button camera-only" type="button" aria-label="Take a photo and scan it" title="Take a photo and scan it">
+          <svg class="icon icon-camera" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 7.5h3l1.4-2h4.2l1.4 2h3A2.5 2.5 0 0 1 21 10v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17v-7a2.5 2.5 0 0 1 2.5-2.5Z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
+        </button>
+        <button id="upload-open" class="icon-button" type="button" aria-label="Upload an image to scan" title="Upload an image to scan">
+          <svg class="icon icon-upload" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+        </button>
+        <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
+        <input id="upload-input" type="file" accept="image/*" hidden>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+      </div>
     </header>
 
     <div id="banner" class="banner" role="alert" hidden>
       <span id="banner-text"></span>
       <button id="banner-reload" type="button" hidden>Reload</button>
-    </div>
-
-    <div class="source-controls" aria-label="Scan sources">
-      <button id="toggle" class="primary camera-start" type="button">Start camera</button>
-      <button id="insert-open" class="icon-button" type="button" aria-label="Insert text" title="Insert text">
-        <svg class="icon icon-text" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v14M8 19h8"/></svg>
-      </button>
-      <button id="photo-open" class="icon-button" type="button" aria-label="Take a photo and scan it" title="Take a photo and scan it">
-        <svg class="icon icon-camera" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 7.5h3l1.4-2h4.2l1.4 2h3A2.5 2.5 0 0 1 21 10v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17v-7a2.5 2.5 0 0 1 2.5-2.5Z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
-      </button>
-      <button id="upload-open" class="icon-button" type="button" aria-label="Upload an image to scan" title="Upload an image to scan">
-        <svg class="icon icon-upload" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
-      </button>
-      <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
-      <input id="upload-input" type="file" accept="image/*" hidden>
-      <span id="status" class="status" role="status" aria-live="polite"></span>
     </div>
 
     <section id="scanner" class="scanner" aria-label="Scanner">
