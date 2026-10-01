@@ -276,7 +276,7 @@ dialog pre { max-height: 60vh; margin: 0 0 1rem; overflow: auto; color: var(--pa
   html, body { height: 100%; overflow: hidden; }
   main { display: flex; flex-direction: column; height: 100dvh; max-width: 64rem; padding-bottom: 1rem; }
   .scanner { display: none; }
-  .camera-start { display: none; }
+  .camera-start, .photo-open { display: none; }
   .results { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .tape { flex: 1; min-height: 0; overflow: hidden; }
   .scan { grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 0 1rem; align-items: center; height: var(--row-h); padding: 0 0.25rem; }
