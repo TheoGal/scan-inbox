@@ -26,11 +26,14 @@ seconds later.
 
 - Open the site on your phone. It reads the camera with the browser's own
   barcode detector, so it handles QR codes, Data Matrix, Aztec, PDF417, and
-  common 1D barcodes (Code 128, Code 39, EAN-13/8, UPC-A, ITF).
+  common 1D barcodes (Code 128, Code 39, EAN-13/8, UPC-A, ITF). When opening the site
+  on a desktop you can upload a photo to be scanned.
 - Each scan is saved to a small database on the server.
 - Open the same site on another device to see the list of everything
   scanned, newest first.
-- Having trouble with scanning a code? Use the **Insert text** to manually save a block of text, or **take photo** and **upload photo** to use the scanner on photos.
+- Having trouble with the live scanner? Use the **Insert text** button to type or paste
+  something in directly or use the **take photo**, **upload photo** buttons.
+- Scans older than 6 months are cleaned up automatically.
 - On a desktop screen the camera is hidden - desktop is for reading results,
   phones are for scanning. The list on desktops is paged so it never scrolls; on
   a phone it pages 10 at a time.
@@ -111,9 +114,10 @@ A single Python process (standard library only, no dependencies) serving a
 small JSON API and the static pages, backed by SQLite. The camera and
 barcode reading run entirely in the browser using the
 [`BarcodeDetector`](https://developer.mozilla.org/en-US/docs/Web/API/Barcode_Detection_API)
-API where available, with a bundled
-[qr-scanner](https://github.com/mebjas/html5-qrcode) library as a QR-only
-fallback for browsers without it.
+API where available (currently Android Chrome), with a bundled
+[ZXing](https://github.com/zxing-js/library) decoder as the fallback
+everywhere else (desktop browsers, iOS Safari) — both read the same set of
+formats: QR, Data Matrix, Aztec, PDF417, and common 1D barcodes.
 
 ## License
 
