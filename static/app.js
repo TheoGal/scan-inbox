@@ -519,20 +519,24 @@ async function decodeImage(image) {
 async function scanStillFile(file) {
   if (!file) return;
   setStatus('Scanning image…');
+  const url = URL.createObjectURL(file);
   try {
-    const bitmap = await createImageBitmap(file);
-    try {
-      const text = await decodeImage(bitmap);
-      if (!text) {
-        setStatus('No barcode or QR code found.');
-        return;
-      }
-      onDecode({ data: text });
-    } finally {
-      bitmap.close?.();
+    // An HTMLImageElement, not an ImageBitmap: the native detector accepts either, but the
+    // ZXing fallback only knows how to size an <img> or a live <video> frame — handing it a
+    // bitmap silently decoded a blank 0x0 canvas every time, regardless of the file's content.
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const text = await decodeImage(img);
+    if (!text) {
+      setStatus('No barcode or QR code found.');
+      return;
     }
+    onDecode({ data: text });
   } catch (error) {
     setStatus(`Could not scan image: ${error.message || error}`);
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 
