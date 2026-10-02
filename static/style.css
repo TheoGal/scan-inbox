@@ -139,6 +139,11 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
   stroke-linejoin: round;
 }
 .icon-button .icon-stop { fill: currentColor; stroke: none; }
+/* svg's `hidden` property/attribute doesn't reliably take effect across
+   browsers, unlike plain HTML elements — a CSS class toggle always works. */
+#toggle .icon-stop { display: none; }
+#toggle.on .icon-start { display: none; }
+#toggle.on .icon-stop { display: inline; }
 
 .status { color: var(--muted); font-size: 0.9rem; }
 

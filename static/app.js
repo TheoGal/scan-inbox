@@ -357,8 +357,7 @@ function setScanning(on) {
   const label = on ? 'Stop camera' : 'Start camera';
   els.toggle.setAttribute('aria-label', label);
   els.toggle.title = label;
-  els.toggle.querySelector('.icon-start').hidden = on;
-  els.toggle.querySelector('.icon-stop').hidden = !on;
+  els.toggle.classList.toggle('on', on);
 }
 
 // Prefer the browser's native BarcodeDetector (fast, on-device) when it's available —
