@@ -362,7 +362,12 @@ const ZXING_FORMATS = [
 ];
 
 let detector = null;
-let zxingReader = null;
+// Two ZXing readers, not one: TRY_HARDER makes a real difference decoding a single still
+// photo (confirmed directly against the library — a barcode photo that failed without it
+// decoded correctly with it on), but it's noticeably slower, which is fine once per upload
+// and wasteful dozens of times a second during live scanning, which gets many attempts anyway.
+let zxingLive = null;
+let zxingStill = null;
 let stream = null;
 let loopId = 0;
 let engineReady = false;
@@ -379,20 +384,23 @@ async function initEngine() {
     }
   } catch { detector = null; }
   if (!detector) {
-    const hints = new Map([[DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS]]);
-    zxingReader = new BrowserMultiFormatReader(hints);
+    zxingLive = new BrowserMultiFormatReader(new Map([[DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS]]));
+    zxingStill = new BrowserMultiFormatReader(new Map([
+      [DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS],
+      [DecodeHintType.TRY_HARDER, true],
+    ]));
   }
 }
 
 // One decode attempt against whichever engine is active; both resolve to a string or null,
 // so the caller (the live-scan tick loop, and decodeImage for stills) doesn't need to care which.
-async function attemptDecode(source) {
+async function attemptDecode(source, { thorough = false } = {}) {
   if (detector) {
     const codes = await detector.detect(source);
     return codes[0]?.rawValue || null;
   }
   try {
-    return zxingReader.decode(source).getText();
+    return (thorough ? zxingStill : zxingLive).decode(source).getText();
   } catch {
     return null; // no code in this frame/image — expected, not an error
   }
@@ -513,7 +521,7 @@ els.viewfinder.addEventListener('pointerleave', (event) => {
 
 async function decodeImage(image) {
   await initEngine();
-  return attemptDecode(image);
+  return attemptDecode(image, { thorough: true });
 }
 
 async function scanStillFile(file) {
