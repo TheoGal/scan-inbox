@@ -124,7 +124,7 @@ function perPage() {
 
 function whenLabel(ts) {
   const date = new Date(ts * 1000);
-  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const day = date.toDateString() === new Date().toDateString()
     ? 'today'
     : date.toLocaleDateString([], { day: 'numeric', month: 'short' });
