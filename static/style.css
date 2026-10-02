@@ -193,8 +193,17 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 .viewfinder:not(.on) .corner { opacity: 0.25; }
 .viewfinder.hit .corner { border-color: var(--hit); opacity: 1; }
 
-
-
+/* Whole preview flashes green on a successful scan, not just the corners. */
+.viewfinder.hit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--hit);
+  opacity: 0.35;
+  animation: scan-hit 0.5s ease-out;
+  pointer-events: none;
+}
+@keyframes scan-hit { from { opacity: 0.45; } to { opacity: 0; } }
 
 /* ---- list ------------------------------------------------------------ */
 .tape { margin: 0; padding: 0; list-style: none; }

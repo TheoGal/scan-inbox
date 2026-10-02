@@ -1,4 +1,9 @@
-import QrScanner from '/vendor/qr-scanner.min.js';
+// Built from @zxing/library v0.21.3 via esbuild — the official package ships no single-file
+// ESM build, so this is a custom bundle of just the five exports we use. Note on licensing:
+// the package's package.json declares MIT, but the LICENSE file it actually ships is
+// Apache-2.0 (from the original Google ZXing project this is a JS port of) — see
+// vendor/zxing.LICENSE, which is that file verbatim.
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '/vendor/zxing.min.js';
 
 const POLL_MS = 5000;       // how often the list refreshes while the tab is visible
 const COOLDOWN_MS = 4000;   // a code must be out of view this long before it counts again
@@ -299,7 +304,6 @@ function schedulePoll() {
 
 /* ---------- Scanning -------------------------------------------------- */
 
-let scanner = null;
 let scanning = false;
 let lastText = '';
 let lastSeen = 0;
@@ -347,9 +351,18 @@ function setScanning(on) {
   els.toggle.textContent = on ? 'Stop camera' : 'Start camera';
 }
 
-// Native BarcodeDetector reads Data Matrix (qr-scanner cannot). Use it whenever the browser offers it.
+// Prefer the browser's native BarcodeDetector (fast, on-device) when it's available —
+// currently Android Chrome only. Everywhere else (desktop, iOS Safari), fall back to the
+// bundled ZXing decoder, which reads the same set of formats, just in JavaScript.
 const WANTED_FORMATS = ['qr_code', 'data_matrix', 'aztec', 'pdf417', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'itf'];
+const ZXING_FORMATS = [
+  BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC, BarcodeFormat.PDF_417,
+  BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
+  BarcodeFormat.UPC_A, BarcodeFormat.ITF,
+];
+
 let detector = null;
+let zxingReader = null;
 let stream = null;
 let loopId = 0;
 let engineReady = false;
@@ -365,6 +378,24 @@ async function initEngine() {
       }
     }
   } catch { detector = null; }
+  if (!detector) {
+    const hints = new Map([[DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS]]);
+    zxingReader = new BrowserMultiFormatReader(hints);
+  }
+}
+
+// One decode attempt against whichever engine is active; both resolve to a string or null,
+// so the caller (the live-scan tick loop, and decodeImage for stills) doesn't need to care which.
+async function attemptDecode(source) {
+  if (detector) {
+    const codes = await detector.detect(source);
+    return codes[0]?.rawValue || null;
+  }
+  try {
+    return zxingReader.decode(source).getText();
+  } catch {
+    return null; // no code in this frame/image — expected, not an error
+  }
 }
 
 async function startNative(deviceId) {
@@ -383,8 +414,8 @@ async function startNative(deviceId) {
     if (run !== loopId) return;
     try {
       if (els.video.readyState >= 2) {
-        const codes = await detector.detect(els.video);
-        if (codes.length) onDecode({ data: codes[0].rawValue });
+        const text = await attemptDecode(els.video);
+        if (text) onDecode({ data: text });
       }
     } catch (e) { setStatus(String((e && e.message) || e)); }
     setTimeout(tick, 120);
@@ -482,22 +513,7 @@ els.viewfinder.addEventListener('pointerleave', (event) => {
 
 async function decodeImage(image) {
   await initEngine();
-
-  if (detector) {
-    const codes = await detector.detect(image);
-    if (codes.length) return codes[0].rawValue;
-  }
-
-  // qr-scanner provides a useful fallback on browsers without BarcodeDetector.
-  try {
-    const result = await QrScanner.scanImage(image, {
-      returnDetailedScanResult: true,
-      alsoTryWithoutScanRegion: true,
-    });
-    return result?.data || result || null;
-  } catch {
-    return null;
-  }
+  return attemptDecode(image);
 }
 
 async function scanStillFile(file) {
@@ -524,22 +540,7 @@ async function startCamera() {
   els.toggle.disabled = true;
   try {
     await initEngine();
-    if (detector) {
-      await startNative();
-    } else {
-      if (!scanner) {
-        scanner = new QrScanner(els.video, onDecode, {
-          preferredCamera: 'environment',
-          returnDetailedScanResult: true,
-          highlightScanRegion: false,
-          highlightCodeOutline: true,
-          maxScansPerSecond: 10,
-        });
-      }
-      await scanner.start();
-      setupZoom();
-      setStatus('This browser can only read QR codes, not Data Matrix.');
-    }
+    await startNative();
     setScanning(true);
   } catch (error) {
     stopNative();
@@ -550,7 +551,6 @@ async function startCamera() {
 }
 
 function stopCamera() {
-  if (scanner) scanner.stop();
   stopNative();
   setScanning(false);
   zoomCaps = null;
@@ -577,7 +577,10 @@ async function setupScanner() {
     return;
   }
   let hasCamera = false;
-  try { hasCamera = await QrScanner.hasCamera(); } catch { /* treat as no camera */ }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    hasCamera = devices.some((d) => d.kind === 'videoinput');
+  } catch { /* treat as no camera */ }
   els.scanner.hidden = !hasCamera;
 }
 
