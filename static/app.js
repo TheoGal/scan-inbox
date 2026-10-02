@@ -16,7 +16,7 @@ const els = {
   insertOpen: $('insert-open'), photoOpen: $('photo-open'), uploadOpen: $('upload-open'),
   photoInput: $('photo-input'), uploadInput: $('upload-input'),
   banner: $('banner'), bannerText: $('banner-text'), bannerReload: $('banner-reload'),
-  list: $('list'), empty: $('empty'), pager: $('pager'), newer: $('newer'), older: $('older'),
+  list: $('list'), empty: $('empty'), pager: $('pager'), pagerNav: $('pager-nav'), newer: $('newer'), older: $('older'),
   range: $('range'), unseen: $('unseen'),
   insert: $('insert'), insertText: $('insert-text'),
   insertSave: $('insert-save'), insertCancel: $('insert-cancel'),
@@ -230,7 +230,13 @@ function render() {
   els.list.replaceChildren(fragment);
 
   els.empty.hidden = !hasData || view.length > 0;
-  els.pager.hidden = view.length <= size && !unseen;
+  // Desktop keeps this row up permanently — it's the GitHub link's home, not just
+  // a pager, and it reuses space already reserved rather than adding a new row.
+  // The Newer/Older group within it still disappears exactly as before when
+  // there's nothing to page through; only the icon's row survives that.
+  const needsPaging = view.length > size || unseen;
+  els.pager.hidden = desktop.matches ? false : !needsPaging;
+  els.pagerNav.hidden = !needsPaging;
   els.range.textContent = view.length ? `${page * size + 1}–${page * size + slice.length} of ${view.length}` : '';
   els.newer.disabled = page === 0;
   els.older.disabled = page >= pages - 1;
@@ -348,7 +354,11 @@ function cameraMessage(error) {
 function setScanning(on) {
   scanning = on;
   els.viewfinder.classList.toggle('on', on);
-  els.toggle.textContent = on ? 'Stop camera' : 'Start camera';
+  const label = on ? 'Stop camera' : 'Start camera';
+  els.toggle.setAttribute('aria-label', label);
+  els.toggle.title = label;
+  els.toggle.querySelector('.icon-start').hidden = on;
+  els.toggle.querySelector('.icon-stop').hidden = !on;
 }
 
 // Prefer the browser's native BarcodeDetector (fast, on-device) when it's available —
