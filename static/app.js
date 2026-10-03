@@ -21,6 +21,8 @@ const els = {
   insert: $('insert'), insertText: $('insert-text'),
   insertSave: $('insert-save'), insertCancel: $('insert-cancel'),
   detail: $('detail'), detailText: $('detail-text'), detailCopy: $('detail-copy'), detailClose: $('detail-close'),
+  selectToggle: $('select-toggle'),
+  deleteConfirm: $('delete-confirm'), deleteConfirmYes: $('delete-confirm-yes'), deleteConfirmCancel: $('delete-confirm-cancel'),
 };
 
 /* ---------- API ------------------------------------------------------- */
@@ -113,6 +115,8 @@ let page = 0;
 let unseen = 0;         // scans that arrived while browsing an older page
 let loaded = false;
 let hasData = false;   // true as soon as the first server response arrives, whether empty or not
+let selectionMode = false;
+const selectedIds = new Set();
 let knownIds = new Set();
 let lastSig = '';
 
@@ -158,6 +162,52 @@ els.detailCopy.addEventListener('click', () => copyText(els.detailText.textConte
 els.detailClose.addEventListener('click', () => els.detail.close());
 els.detail.addEventListener('click', (e) => { if (e.target === els.detail) els.detail.close(); });
 
+/* ---------- Bulk select / delete ---------------------------------------- */
+
+function exitSelectionMode() {
+  selectionMode = false;
+  selectedIds.clear();
+  els.selectToggle.classList.remove('on');
+  render();
+}
+
+els.selectToggle.addEventListener('click', () => {
+  if (!selectionMode) {
+    selectionMode = true;
+    selectedIds.clear();
+    els.selectToggle.classList.add('on');
+    render();
+    return;
+  }
+  if (selectedIds.size === 0) {
+    exitSelectionMode();
+    return;
+  }
+  els.deleteConfirm.showModal();
+});
+
+els.deleteConfirmCancel.addEventListener('click', () => {
+  els.deleteConfirm.close();
+  exitSelectionMode();
+});
+els.deleteConfirm.addEventListener('click', (e) => {
+  if (e.target === els.deleteConfirm) { els.deleteConfirm.close(); exitSelectionMode(); }
+});
+
+els.deleteConfirmYes.addEventListener('click', async () => {
+  els.deleteConfirmYes.disabled = true;
+  const ids = [...selectedIds];
+  const results = await Promise.allSettled(
+    ids.map((id) => api(`/api/scans/${id}`, { method: 'DELETE' })),
+  );
+  els.deleteConfirmYes.disabled = false;
+  els.deleteConfirm.close();
+  exitSelectionMode();
+  const failed = results.find((r) => r.status === 'rejected');
+  if (failed) handleError(failed.reason);
+  refresh(true);
+});
+
 function scanRow(scan, isNew) {
   const li = document.createElement('li');
   li.className = 'scan' + (isNew ? ' new' : '');
@@ -184,7 +234,7 @@ function scanRow(scan, isNew) {
   }
   payload.title = scan.text;
   payload.addEventListener('click', (e) => {
-    if (desktop.matches && !e.target.closest('a')) openDetail(scan.text);
+    if (desktop.matches && !selectionMode && !e.target.closest('a')) openDetail(scan.text);
   });
 
   const actions = document.createElement('div');
@@ -215,11 +265,27 @@ function scanRow(scan, isNew) {
 
   actions.append(copy, del);
   body.append(payload, actions);
-  li.append(when, body);
+
+  if (selectionMode) {
+    const select = document.createElement('div');
+    select.className = 'select';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedIds.has(scan.id);
+    checkbox.setAttribute('aria-label', 'Select this scan');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) selectedIds.add(scan.id); else selectedIds.delete(scan.id);
+    });
+    select.append(checkbox);
+    li.append(select, when, body);
+  } else {
+    li.append(when, body);
+  }
   return li;
 }
 
 function render() {
+  els.list.classList.toggle('selecting', selectionMode);
   const size = perPage();
   const pages = Math.max(1, Math.ceil(view.length / size));
   page = Math.min(page, pages - 1);

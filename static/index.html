@@ -39,6 +39,10 @@
         </button>
         <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
         <input id="upload-input" type="file" accept="image/*" hidden>
+        <button id="select-toggle" class="icon-button" type="button" aria-label="Select scans to delete" title="Select scans to delete">
+          <svg class="icon icon-checklist" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4.5" width="5" height="5" rx="1.2"/><rect x="4" y="14.5" width="5" height="5" rx="1.2"/><path d="M12 7h8M12 17h8"/></svg>
+          <svg class="icon icon-trash" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13M10 11v6M14 11v6"/></svg>
+        </button>
         <span id="status" class="status" role="status" aria-live="polite"></span>
       </div>
     </header>
@@ -85,6 +89,13 @@
     <div class="dialog-actions">
       <button id="detail-copy" type="button">Copy</button>
       <button id="detail-close" type="button">Close</button>
+    </div>
+  </dialog>
+  <dialog id="delete-confirm">
+    <p id="delete-confirm-text">Delete the selected entries?</p>
+    <div class="dialog-actions">
+      <button id="delete-confirm-cancel" type="button">Cancel</button>
+      <button id="delete-confirm-yes" class="danger" type="button">Delete</button>
     </div>
   </dialog>
   <script type="module" src="/app.js"></script>

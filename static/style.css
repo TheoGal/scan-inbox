@@ -145,6 +145,10 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
 #toggle.on .icon-start { display: none; }
 #toggle.on .icon-stop { display: inline; }
 
+#select-toggle .icon-trash { display: none; }
+#select-toggle.on .icon-checklist { display: none; }
+#select-toggle.on .icon-trash { display: inline; }
+
 .status { color: var(--muted); font-size: 0.9rem; }
 
 /* ---- scanner --------------------------------------------------------- */
@@ -221,6 +225,13 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
   border-top: 1px solid var(--line);
 }
 .scan:last-child { border-bottom: 1px solid var(--line); }
+
+/* Selection mode: a checkbox column is prepended and the per-row actions hide,
+   replaced by the bulk-delete flow via the select-toggle button in the header. */
+.tape.selecting .scan { grid-template-columns: 1.75rem 4.25rem 1fr; }
+.tape.selecting .scan .actions { display: none; }
+.scan .select { display: flex; align-items: center; justify-content: center; }
+.scan .select input[type="checkbox"] { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); cursor: pointer; }
 
 .when {
   color: var(--muted);
@@ -315,6 +326,7 @@ dialog pre { max-height: 60vh; margin: 0 0 1rem; overflow: auto; color: var(--pa
   .results { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .tape { flex: 1; min-height: 0; overflow: hidden; }
   .scan { grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 0 1rem; align-items: center; height: var(--row-h); padding: 0 0.25rem; }
+  .tape.selecting .scan { grid-template-columns: 1.75rem 9rem minmax(0, 1fr) auto; }
   .scan .body { display: contents; }
   .scan .when br { display: none; }
   .scan .payload { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
@@ -338,3 +350,4 @@ dialog textarea {
   resize: vertical;
 }
 .dialog-actions button.primary { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.dialog-actions button.danger { border-color: transparent; background: var(--danger); color: var(--well); font-weight: 600; }
