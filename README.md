@@ -33,6 +33,7 @@ seconds later.
   scanned, newest first.
 - Having trouble with the live scanner? Use the **Insert text** button to type or paste
   something in directly or use the **take photo**, **upload photo** buttons.
+- Use the **selection mode** button to bulk delete entries.  
 - Scans older than 6 months are cleaned up automatically.
 - On a desktop screen the camera is hidden - desktop is for reading results,
   phones are for scanning. The list on desktops is paged so it never scrolls; on
