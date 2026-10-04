@@ -11,16 +11,12 @@
   --hit: #4ade9b;
   --payload: #ffe08a;
   --danger: #ff8a80;
-  --row-h: 2.75rem; /* desktop row height; keep in sync with ROW_REM in app.js */
+  --row-h: 2.75rem;
   --warn-bg: #3a2c0a;
   --warn-ink: #ffe2a3;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-/* Self-hosted (static/vendor/), not Google Fonts — same approach as the ZXing
-   library: one file, vendored, no external request at runtime. Latin subset
-   only, since it's used for the page title ("Scan inbox"); see poppins.LICENSE
-   (SIL OFL-1.1) for attribution. */
 @font-face {
   font-family: "Poppins";
   font-style: normal;
