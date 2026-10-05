@@ -129,4 +129,4 @@ well, Im Greek.
 
 ## License
 
-[MIT](LICENSE).- Do what you want with it!
+[MIT](LICENSE) - Do what you want with it!
