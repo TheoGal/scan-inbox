@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""scan-inbox - a tiny "scan on one device, read on another" inbox.
 
-Standard library only. Serves the web pages and a small JSON API backed by SQLite.
-Pages come from ./static (use a bind mount) when a file exists there, otherwise from
-./static-default, the copy built into the image.
-
-  GET    /api/scans          list scans, newest first
-  GET    /api/scans/latest   {"id": newest id, "count": n} - cheap change detector for polling
-  POST   /api/scans          {"text": "...", "ts": <unix seconds, optional>}
-  DELETE /api/scans/<id>
-  GET    /healthz
-
-Authentication is NOT handled here: put it behind an authentication provider (ex. Authelia)
-and bind the container to 127.0.0.1 only.
-"""
 import json
 import os
 import re
