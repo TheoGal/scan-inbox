@@ -4,6 +4,11 @@
 // Apache-2.0 (from the original Google ZXing project this is a JS port of) — see
 // vendor/zxing.LICENSE, which is that file verbatim.
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '/vendor/zxing.min.js';
+// Custom bundle of qrcode-generator (MIT, Kazuhiko Arase) via esbuild, with its official
+// UTF-8 string-encoding add-on folded in — see vendor/qrcode.LICENSE. Tiny (~20KB), unlike
+// the ZXing decoder, so it's loaded unconditionally for everyone rather than kept behind
+// any native-API check.
+import qrcode from '/vendor/qrcode.min.js';
 
 const POLL_MS = 5000;       // how often the list refreshes while the tab is visible
 const COOLDOWN_MS = 4000;   // a code must be out of view this long before it counts again
@@ -21,6 +26,8 @@ const els = {
   insert: $('insert'), insertText: $('insert-text'),
   insertSave: $('insert-save'), insertCancel: $('insert-cancel'),
   detail: $('detail'), detailText: $('detail-text'), detailCopy: $('detail-copy'), detailClose: $('detail-close'),
+  qrOpen: $('qr-open'), qrDialog: $('qr-dialog'), qrText: $('qr-text'), qrPreview: $('qr-preview'),
+  qrEmpty: $('qr-empty'), qrError: $('qr-error'), qrClose: $('qr-close'), qrDownload: $('qr-download'),
   selectToggle: $('select-toggle'),
   deleteConfirm: $('delete-confirm'), deleteConfirmYes: $('delete-confirm-yes'), deleteConfirmCancel: $('delete-confirm-cancel'),
 };
@@ -715,6 +722,121 @@ async function saveInserted() {
 els.insertSave.addEventListener('click', saveInserted);
 els.insertText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveInserted(); }
+});
+
+/* ---------- QR code generator -------------------------------------------
+   Pure client-side, nothing is saved: pasting an existing scan's text here
+   (or typing anything new) just renders it as a QR to view or download —
+   a separate thing from Insert text, which actually adds a new scan. */
+
+const QR_MARGIN = 2; // quiet-zone modules on each side; real scanners expect one
+
+// Builds the on-screen SVG: adjacent dark modules in a row are merged into a
+// single wide rect rather than one <rect> per module, which keeps a dense
+// code's markup light. The library's own matrix (isDark/getModuleCount) is
+// reused for the PNG export too, so both paths always agree pixel for pixel.
+function qrToSvg(qr) {
+  const n = qr.getModuleCount();
+  const size = n + QR_MARGIN * 2;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  const bg = document.createElementNS(svg.namespaceURI, 'rect');
+  bg.setAttribute('width', size);
+  bg.setAttribute('height', size);
+  bg.setAttribute('fill', '#fff');
+  svg.append(bg);
+  for (let row = 0; row < n; row++) {
+    let col = 0;
+    while (col < n) {
+      if (!qr.isDark(row, col)) { col++; continue; }
+      const start = col;
+      while (col < n && qr.isDark(row, col)) col++;
+      const rect = document.createElementNS(svg.namespaceURI, 'rect');
+      rect.setAttribute('x', start + QR_MARGIN);
+      rect.setAttribute('y', row + QR_MARGIN);
+      rect.setAttribute('width', col - start);
+      rect.setAttribute('height', 1);
+      rect.setAttribute('fill', '#000');
+      svg.append(rect);
+    }
+  }
+  return svg;
+}
+
+// Builds a QR instance for the given text, or returns null if it's too long
+// to encode at all (the library throws a plain string, not an Error, when
+// even the largest QR version can't fit the data).
+function buildQr(text) {
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr;
+  } catch {
+    return null;
+  }
+}
+
+let qrDebounce;
+function updateQr() {
+  const text = els.qrText.value.trim();
+  els.qrPreview.querySelector('svg')?.remove();
+  if (!text) {
+    els.qrEmpty.hidden = false;
+    els.qrError.hidden = true;
+    els.qrDownload.disabled = true;
+    return;
+  }
+  const qr = buildQr(text);
+  if (!qr) {
+    els.qrEmpty.hidden = true;
+    els.qrError.hidden = false;
+    els.qrDownload.disabled = true;
+    return;
+  }
+  els.qrEmpty.hidden = true;
+  els.qrError.hidden = true;
+  els.qrDownload.disabled = false;
+  els.qrPreview.append(qrToSvg(qr));
+}
+
+els.qrOpen.addEventListener('click', () => {
+  els.qrText.value = '';
+  updateQr();
+  els.qrDialog.showModal();
+  els.qrText.focus();
+});
+els.qrClose.addEventListener('click', () => els.qrDialog.close());
+els.qrDialog.addEventListener('click', (e) => { if (e.target === els.qrDialog) els.qrDialog.close(); });
+els.qrText.addEventListener('input', () => {
+  clearTimeout(qrDebounce);
+  qrDebounce = setTimeout(updateQr, 150);
+});
+
+els.qrDownload.addEventListener('click', () => {
+  const qr = buildQr(els.qrText.value.trim());
+  if (!qr) return; // button is disabled whenever this would happen; just a safety net
+  const n = qr.getModuleCount();
+  const cell = Math.max(4, Math.round(640 / (n + QR_MARGIN * 2)));
+  const size = (n + QR_MARGIN * 2) * cell;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+  // renderTo2dContext draws from (0,0); offset so the quiet-zone margin matches the SVG preview.
+  ctx.translate(QR_MARGIN * cell, QR_MARGIN * cell);
+  qr.renderTo2dContext(ctx, cell);
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scan-inbox-qr.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 });
 
 /* ---------- Boot ------------------------------------------------------ */

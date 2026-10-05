@@ -159,6 +159,12 @@ h1 { margin: 0; font-family: "Poppins", var(--sans); font-size: 1.5rem; font-wei
 #select-toggle.on .icon-checklist { display: none; }
 #select-toggle.on .icon-trash { display: inline; }
 
+/* Filled, not outlined, like the stop-square — a QR glyph drawn as thin
+   strokes turns to mush at this size. .cut punches the small finder-pattern
+   holes using the surface color behind the button, not a hardcoded color. */
+.icon-qr { fill: currentColor; stroke: none; }
+.icon-qr .cut { fill: var(--bg); }
+
 .status { color: var(--muted); font-size: 0.9rem; }
 
 /* ---- scanner --------------------------------------------------------- */
@@ -320,6 +326,23 @@ dialog {
 dialog::backdrop { background: rgb(3 8 20 / 0.7); }
 dialog pre { max-height: 60vh; margin: 0 0 1rem; overflow: auto; color: var(--payload); font: 0.9rem/1.45 var(--sans); white-space: pre-wrap; overflow-wrap: anywhere; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+/* ---- QR-generator dialog ------------------------------------------------ */
+#qr-text { min-height: 4rem; }
+.qr-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #ffffff; /* a real QR needs a light, high-contrast background to scan reliably */
+}
+.qr-preview svg { display: block; width: 11rem; height: 11rem; }
+.qr-preview[hidden], .qr-preview [hidden] { display: none; }
+.qr-empty { margin: 0; color: #6b7280; font-size: 0.85rem; text-align: center; }
+.qr-error { margin: 0; color: #b3261e; font-size: 0.85rem; text-align: center; font-weight: 600; }
 .dialog-actions button { padding: 0.5rem 0.9rem; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 0.9rem; cursor: pointer; }
 
 /* ---- desktop (mouse/trackpad): no camera, no page scrollbar, one line per scan */

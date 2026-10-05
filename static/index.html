@@ -43,6 +43,9 @@
         </button>
         <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
         <input id="upload-input" type="file" accept="image/*" hidden>
+        <button id="qr-open" class="icon-button" type="button" aria-label="Create a QR code from text" title="Create a QR code from text">
+          <svg class="icon icon-qr" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect class="cut" x="6.3" y="6.3" width="1.4" height="1.4"/><rect class="cut" x="16.3" y="6.3" width="1.4" height="1.4"/><rect class="cut" x="6.3" y="16.3" width="1.4" height="1.4"/><rect x="14" y="14" width="2.3" height="2.3"/><rect x="17.5" y="14" width="2.3" height="2.3"/><rect x="14" y="17.5" width="2.3" height="2.3"/></svg>
+        </button>
         <button id="select-toggle" class="icon-button" type="button" aria-label="Select scans to delete" title="Select scans to delete">
           <svg class="icon icon-checklist" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4.5" width="5" height="5" rx="1.2"/><rect x="4" y="14.5" width="5" height="5" rx="1.2"/><path d="M12 7h8M12 17h8"/></svg>
           <svg class="icon icon-trash" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13M10 11v6M14 11v6"/></svg>
@@ -86,6 +89,18 @@
     <div class="dialog-actions">
       <button id="insert-cancel" type="button">Cancel</button>
       <button id="insert-save" class="primary" type="button">Save</button>
+    </div>
+  </dialog>
+  <dialog id="qr-dialog">
+    <label for="qr-text" class="dialog-label">Text to turn into a QR code</label>
+    <textarea id="qr-text" maxlength="4096" rows="4" spellcheck="false"></textarea>
+    <div id="qr-preview" class="qr-preview">
+      <p id="qr-empty" class="qr-empty">Paste or type text above to generate a QR code.</p>
+      <p id="qr-error" class="qr-error" hidden>Too long to fit in a QR code — try shortening it.</p>
+    </div>
+    <div class="dialog-actions">
+      <button id="qr-close" type="button">Close</button>
+      <button id="qr-download" class="primary" type="button" disabled>Download</button>
     </div>
   </dialog>
   <dialog id="detail">
