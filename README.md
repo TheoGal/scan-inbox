@@ -35,7 +35,7 @@ seconds later.
   something in directly or use the **take photo**, **upload photo** buttons.
 - Use the **selection mode** button to bulk delete entries.
 - Need a QR code instead? Tap the **QR code** button, paste or type any text (an existing
-  scan's text, a Wi-Fi password, anything), and a QR appears instantly — download it as a
+  scan's text, a Wi-Fi password, anything), and a QR appears instantly - download it as a
   PNG or just point another device's camera at the screen. Nothing typed here is saved. 
 - Scans older than 6 months are cleaned up automatically.
 - On a desktop screen the camera is hidden - desktop is for reading results,
