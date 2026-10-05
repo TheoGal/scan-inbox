@@ -120,7 +120,7 @@ barcode reading run entirely in the browser using the
 [BarcodeDetector](https://developer.mozilla.org/en-US/docs/Web/API/Barcode_Detection_API)
 API where available (currently Android Chrome), with a bundled
 [ZXing](https://github.com/zxing-js/library) decoder as the fallback
-everywhere else (desktop browsers, iOS Safari) — both read the same set of
+everywhere else (desktop browsers, iOS Safari) - both read the same set of
 formats: QR, Data Matrix, Aztec, PDF417, and common 1D barcodes.
 QR generation runs entirely client-side too, using a
 bundled [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
