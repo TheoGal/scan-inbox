@@ -28,6 +28,7 @@ const els = {
   detail: $('detail'), detailText: $('detail-text'), detailCopy: $('detail-copy'), detailClose: $('detail-close'),
   qrOpen: $('qr-open'), qrDialog: $('qr-dialog'), qrText: $('qr-text'), qrPreview: $('qr-preview'),
   qrEmpty: $('qr-empty'), qrError: $('qr-error'), qrClose: $('qr-close'), qrDownload: $('qr-download'),
+  sourceControls: $('source-controls'),
   selectToggle: $('select-toggle'),
   deleteConfirm: $('delete-confirm'), deleteConfirmYes: $('delete-confirm-yes'), deleteConfirmCancel: $('delete-confirm-cancel'),
 };
@@ -167,7 +168,8 @@ function openDetail(text) {
 }
 els.detailCopy.addEventListener('click', () => copyText(els.detailText.textContent, els.detailCopy));
 els.detailClose.addEventListener('click', () => els.detail.close());
-els.detail.addEventListener('click', (e) => { if (e.target === els.detail) els.detail.close(); });
+// Deliberately no outside-click-to-close: a dialog only closes via its own
+// button (or Escape, which stays as the browser's native dialog behavior).
 
 /* ---------- Bulk select / delete ---------------------------------------- */
 
@@ -177,6 +179,16 @@ function exitSelectionMode() {
   els.selectToggle.classList.remove('on');
   render();
 }
+
+// Switching to any other toolbar action drops selection mode entirely, selections
+// included — captured (not bubble) so this runs before that button's own handler,
+// and excludes select-toggle itself and the pager, which stays usable mid-selection
+// (selections are tracked by scan id, so paging to tick more rows elsewhere works).
+els.sourceControls.addEventListener('click', (e) => {
+  if (!selectionMode) return;
+  const btn = e.target.closest('button');
+  if (btn && btn !== els.selectToggle) exitSelectionMode();
+}, true);
 
 els.selectToggle.addEventListener('click', () => {
   if (!selectionMode) {
@@ -197,9 +209,7 @@ els.deleteConfirmCancel.addEventListener('click', () => {
   els.deleteConfirm.close();
   exitSelectionMode();
 });
-els.deleteConfirm.addEventListener('click', (e) => {
-  if (e.target === els.deleteConfirm) { els.deleteConfirm.close(); exitSelectionMode(); }
-});
+
 
 els.deleteConfirmYes.addEventListener('click', async () => {
   els.deleteConfirmYes.disabled = true;
@@ -807,7 +817,7 @@ els.qrOpen.addEventListener('click', () => {
   els.qrText.focus();
 });
 els.qrClose.addEventListener('click', () => els.qrDialog.close());
-els.qrDialog.addEventListener('click', (e) => { if (e.target === els.qrDialog) els.qrDialog.close(); });
+
 els.qrText.addEventListener('input', () => {
   clearTimeout(qrDebounce);
   qrDebounce = setTimeout(updateQr, 150);
